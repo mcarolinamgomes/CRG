@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>VetScribe | Gerador de Relatórios Clínicos</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    body {
+      margin: 0;
+      font-family: 'Inter', sans-serif;
+      background-color: #f0f2f5;
+      color: #333;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+    }
+
+    .container {
+      background-color: #fff;
+      padding: 40px 30px;
+      border-radius: 16px;
+      box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+      max-width: 600px;
+      width: 100%;
+      text-align: center;
+    }
+
+    h1 {
+      color: #0d6efd;
+      margin-bottom: 10px;
+    }
+
+    p {
+      color: #555;
+      margin-bottom: 30px;
+    }
+
+    .input-group {
+      display: flex;
+      justify-content: center;
+      gap: 12px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+    }
+
+    .upload-label, .record-btn {
+      padding: 12px 20px;
+      font-size: 15px;
+      border-radius: 8px;
+      cursor: pointer;
+      background-color: #e9ecef;
+      color: #333;
+      border: none;
+      transition: background 0.3s;
+    }
+
+    .upload-label:hover, .record-btn:hover {
+      background-color: #dee2e6;
+    }
+
+    .upload-label input {
+      display: none;
+    }
+
+    .submit-btn {
+      margin-top: 10px;
+      padding: 12px 24px;
+      font-size: 16px;
+      background-color: #ccc;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      cursor: not-allowed;
+      transition: background 0.3s;
+    }
+
+    .submit-btn.enabled {
+      background-color: #0d6efd;
+      cursor: pointer;
+    }
+
+    #status {
+      margin-top: 1rem;
+      font-weight: 500;
+    }
+
+    #download-link {
+      display: none;
+      margin-top: 1.5rem;
+      font-size: 16px;
+      text-decoration: none;
+      background: #198754;
+      color: white;
+      padding: 10px 20px;
+      border-radius: 6px;
+    }
+
+    #download-link:hover {
+      background: #157347;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <h1>VetScribe</h1>
+    <p>Envie ou grave um áudio para gerar automaticamente um relatório clínico veterinário.</p>
+
+    <form id="upload-form">
+      <div class="input-group">
+        <label class="upload-label">
+          📎 Upload de Áudio
+          <input type="file" id="audio-file" accept="audio/*">
+        </label>
+        <button type="button" class="record-btn" id="record-btn">🎙️ Gravar Áudio</button>
+      </div>
+
+      <button type="submit" class="submit-btn" id="submit-btn" disabled>🎧 Gerar Relatório</button>
+    </form>
+
+    <p id="status"></p>
+    <a id="download-link" href="#" download="relatorio_clinico.docx">📥 Baixar Relatório</a>
+  </div>
+
+  <script>
+    const form = document.getElementById('upload-form');
+    const audioInput = document.getElementById('audio-file');
+    const recordBtn = document.getElementById('record-btn');
+    const submitBtn = document.getElementById('submit-btn');
+    const downloadLink = document.getElementById('download-link');
+    const status = document.getElementById('status');
+
+    let mediaRecorder;
+    let recordedChunks = [];
+
+    function enableSubmitButton() {
+      submitBtn.disabled = false;
+      submitBtn.classList.add("enabled");
+    }
+
+    audioInput.addEventListener('change', () => {
+      if (audioInput.files.length > 0) {
+        enableSubmitButton();
+        status.innerText = "✅ Ficheiro selecionado.";
+      }
+    });
+
+    recordBtn.addEventListener('click', async () => {
+      if (mediaRecorder && mediaRecorder.state === "recording") {
+        mediaRecorder.stop();
+        recordBtn.innerText = "🎙️ Gravar Áudio";
+        return;
+      }
+
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        mediaRecorder = new MediaRecorder(stream);
+        recordedChunks = [];
+
+        mediaRecorder.ondataavailable = e => recordedChunks.push(e.data);
+        mediaRecorder.onstop = () => {
+          const blob = new Blob(recordedChunks, { type: 'audio/webm' });
+          const file = new File([blob], "gravacao.webm", { type: "audio/webm" });
+
+          const dataTransfer = new DataTransfer();
+          dataTransfer.items.add(file);
+          audioInput.files = dataTransfer.files;
+
+          enableSubmitButton();
+          status.innerText = "✅ Gravação concluída. Pronto para envio.";
+        };
+
+        mediaRecorder.start();
+        recordBtn.innerText = "⏹️ Parar Gravação";
+        status.innerText = "🔴 Gravando...";
+      } catch (err) {
+        console.error("Erro ao acessar o microfone:", err);
+        status.innerText = "❌ Erro ao acessar o microfone.";
+      }
+    });
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const file = audioInput.files[0];
+      if (!file) {
+        status.innerText = "⚠️ Nenhum áudio disponível.";
+        return;
+      }
+
+      submitBtn.disabled = true;
+      submitBtn.classList.remove("enabled");
+      status.innerText = "🔄 Enviando áudio e gerando relatório...";
+      downloadLink.style.display = 'none';
+
+      const formData = new FormData();
+      formData.append("file", file);
+
+      try {
+        const response = await fetch("/upload", {
+          method: "POST",
+          body: formData
+        });
+
+        if (!response.ok) throw new Error("Erro ao processar o áudio.");
+
+        const blob = await response.blob();
+        const url = URL.createObjectURL(blob);
+
+        downloadLink.href = url;
+        downloadLink.style.display = "inline-block";
+        status.innerText = "✅ Relatório gerado com sucesso!";
+      } catch (err) {
+        console.error(err);
+        status.innerText = "❌ Erro ao gerar o relatório.";
+      }
+    });
+  </script>
+</body>
+</html>
