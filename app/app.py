@@ -8,19 +8,14 @@ from app.docx_utils import generate_pretty_docx
 import uuid
 import shutil
 
-from fastapi.responses import HTMLResponse
-from pathlib import Path
 
 app = FastAPI()
-
-# Navigate from web_app_repo/app/app.py to web_app_repo/static
-static_dir = Path(__file__).resolve().parent.parent.parent / "static"
-app.mount("/static", StaticFiles(directory=static_dir), name="static")
+app.mount("/static", StaticFiles(directory="static"), name="static")
 
 @app.get("/")
-def root():
-    index_path = static_dir / "index.html"
-    return HTMLResponse(index_path.read_text(encoding="utf-8"))
+def serve_frontend():
+    with open("static/index.html", "r", encoding="utf-8") as f:
+        return HTMLResponse(content=f.read())
 
 
 @app.post("/upload")
