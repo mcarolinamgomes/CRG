@@ -13,16 +13,13 @@ from pathlib import Path
 
 app = FastAPI()
 
-# Serve /static/ correctly (e.g., CSS, logo, etc.)
-static_dir = Path(__file__).parent / "static"
+# Navigate from web_app_repo/app/app.py to web_app_repo/static
+static_dir = Path(__file__).resolve().parent.parent.parent / "static"
 app.mount("/static", StaticFiles(directory=static_dir), name="static")
 
-# Serve index.html safely
 @app.get("/")
 def root():
     index_path = static_dir / "index.html"
-    if not index_path.exists():
-        return HTMLResponse("<h1>❌ index.html not found</h1>", status_code=500)
     return HTMLResponse(index_path.read_text(encoding="utf-8"))
 
 
