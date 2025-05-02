@@ -2,9 +2,9 @@ from fastapi import FastAPI, UploadFile, File
 from fastapi.responses import FileResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
 import os
-from whisper_utils import transcribe_audio
-from llama3_utils import generate_report
-from docx_utils import generate_pretty_docx
+from app.whisper_utils import transcribe_audio  # ✅ if inside an `app/` folder
+from app.llama3_utils import generate_report
+from app.docx_utils import generate_pretty_docx
 import uuid
 import shutil
 
