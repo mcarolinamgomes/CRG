@@ -12,12 +12,15 @@ from pathlib import Path
 app = FastAPI()
 
 # Use absolute path based on current file location
-BASE_DIR = Path(__file__).resolve().parent
-STATIC_DIR = BASE_DIR 
+BASE_DIR = Path(__file__).resolve().parent.parent
+STATIC_DIR = BASE_DIR / "static"
+
+# Mount static folder
+app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
 @app.get("/")
 def serve_frontend():
-    index_path = STATIC_DIR 
+    index_path = STATIC_DIR / "index.html"
     return HTMLResponse(content=index_path.read_text(encoding="utf-8"))
 
 
