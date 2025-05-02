@@ -7,15 +7,22 @@ from app.llama3_utils import generate_report
 from app.docx_utils import generate_pretty_docx
 import uuid
 import shutil
-
+from pathlib import Path
 
 app = FastAPI()
-app.mount("/static", StaticFiles(directory="static"), name="static")
+
+# Use absolute path based on current file location
+BASE_DIR = Path(__file__).resolve().parent.parent
+STATIC_DIR = BASE_DIR / "static"
+
+# Mount static folder
+app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
 @app.get("/")
 def serve_frontend():
-    with open("static/index.html", "r", encoding="utf-8") as f:
-        return HTMLResponse(content=f.read())
+    index_path = STATIC_DIR / "index.html"
+    return HTMLResponse(content=index_path.read_text(encoding="utf-8"))
+
 
 
 @app.post("/upload")
