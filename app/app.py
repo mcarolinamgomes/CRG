@@ -8,14 +8,22 @@ from app.docx_utils import generate_pretty_docx
 import uuid
 import shutil
 
+from fastapi.responses import HTMLResponse
+from pathlib import Path
 
 app = FastAPI()
-app.mount("/static", StaticFiles(directory="static"), name="static")
 
+# Serve /static/ correctly (e.g., CSS, logo, etc.)
+static_dir = Path(__file__).parent / "static"
+app.mount("/static", StaticFiles(directory=static_dir), name="static")
+
+# Serve index.html safely
 @app.get("/")
-def serve_frontend():
-    with open("../static/index.html", "r", encoding="utf-8") as f:
-        return HTMLResponse(content=f.read())
+def root():
+    index_path = static_dir / "index.html"
+    if not index_path.exists():
+        return HTMLResponse("<h1>❌ index.html not found</h1>", status_code=500)
+    return HTMLResponse(index_path.read_text(encoding="utf-8"))
 
 
 @app.post("/upload")
